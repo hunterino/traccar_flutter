@@ -29,9 +29,6 @@ This library leverages the following native SDKs:
 - [Traccar Android SDK](https://github.com/traccar/traccar-client-android)
 - [Traccar iOS SDK](https://github.com/traccar/traccar-client-ios)
 
-
-برای افزودن مجوزهای لازم به پروژه‌های **Android** و **iOS** جهت استفاده از این پلاگین، می‌توانید بخش زیر را به فایل `README.md` اضافه کنید:
-
 ---
 
 ### Required Permissions
@@ -139,8 +136,6 @@ void main() async {
   print('Service Logs: $logs');
 }
 ```
-
-در زیر یک جدول برای توضیحات فیلدهای کلاس `TraccarConfigs` به همراه مقادیر پیش‌فرض ارائه شده است. این جدول را می‌توانید در فایل `README.md` خود اضافه کنید:
 
 ---
 
