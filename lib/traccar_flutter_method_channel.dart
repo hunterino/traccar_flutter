@@ -10,7 +10,6 @@ class MethodChannelTraccarFlutter extends TraccarFlutterPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('traccar_flutter');
 
-
   @override
   Future<String?> initTraccar() {
     return methodChannel.invokeMethod<String>('init');

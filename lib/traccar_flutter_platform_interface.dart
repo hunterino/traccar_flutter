@@ -39,6 +39,7 @@ abstract class TraccarFlutterPlatform extends PlatformInterface {
   Future<String?> stopService() {
     throw UnimplementedError('stopService() has not been implemented.');
   }
+
   Future<String?> showStatusLogs() {
     throw UnimplementedError('showStatusLogs() has not been implemented.');
   }

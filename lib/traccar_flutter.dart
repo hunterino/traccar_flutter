@@ -6,7 +6,6 @@ import 'traccar_flutter_platform_interface.dart';
 /// This class provides methods to initialize the Traccar SDK, configure settings,
 /// start/stop the tracking service, and access status logs.
 class TraccarFlutter {
-
   /// Initializes the Traccar service.
   ///
   /// This method sets up the necessary resources for Traccar to function.

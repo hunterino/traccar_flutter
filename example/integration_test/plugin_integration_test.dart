@@ -21,8 +21,7 @@ void main() {
   });
 
   group('Set configurations and check service', () {
-    testWidgets('Set configurations',
-        (WidgetTester tester) async {
+    testWidgets('Set configurations', (WidgetTester tester) async {
       final configs = TraccarConfigs(
         deviceId: 'test-device-id',
         serverUrl: 'https://demo.traccar.org',
