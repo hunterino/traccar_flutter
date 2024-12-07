@@ -4,13 +4,13 @@ A Flutter library to integrate with the [Traccar](https://www.traccar.org/) trac
 
 ---
 
-## Contact
+## Note  
 
-If you have any questions or need support regarding the `traccar_flutter` plugin, feel free to reach out to me:
+This plugin, is **not an official Traccar project**. It has been developed independently by me, to help integrate Traccar’s functionality into Flutter applications.  
 
-- [Mostafa Movahhed on LinkedIn](https://www.linkedin.com/in/mostafamovahhed)
+If you have any questions, suggestions, or need support, feel free to reach out:  
 
-I’ll be happy to assist you!
+- [Mostafa Movahhed on LinkedIn](https://www.linkedin.com/in/mostafamovahhed)  
 
 ---
 
