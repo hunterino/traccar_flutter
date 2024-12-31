@@ -35,10 +35,10 @@ object ProtocolFormatter {
             builder.appendQueryParameter("charge", position.charging.toString())
         }
         if (position.mock) {
-            builder.appendQueryParameter("Mock", position.mock.toString())
+            builder.appendQueryParameter("mock", position.mock.toString())
         }
         if (alarm != null) {
-            builder.appendQueryParameter("Alarm", alarm)
+            builder.appendQueryParameter("alarm", alarm)
         }
         return builder.build().toString()
     }
