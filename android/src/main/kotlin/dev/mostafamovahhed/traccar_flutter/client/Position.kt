@@ -59,6 +59,26 @@ data class Position(
             false
         },
     )
+
+    /**
+     * Converts this Position to a map for Flutter method channel communication.
+     */
+    fun toMap(): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "deviceId" to deviceId,
+            "time" to time.time,
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "altitude" to altitude,
+            "speed" to speed,
+            "course" to course,
+            "accuracy" to accuracy,
+            "battery" to battery,
+            "charging" to charging,
+            "mock" to mock
+        )
+    }
 }
 
 private const val rolloverDate = 1554508800000L // April 6, 2019

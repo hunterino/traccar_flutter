@@ -29,13 +29,16 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
+import timber.log.Timber
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import java.util.*
 import dev.mostafamovahhed.traccar_flutter.R
+import io.flutter.plugin.common.MethodChannel
+import android.os.Handler
+import android.os.Looper
 
 class TraccarController {
 
@@ -70,30 +73,63 @@ class TraccarController {
             StatusActivity.addMessage(message)
         }
 
+        @Volatile
+        private var methodChannel: MethodChannel? = null
+        private val mainHandler = Handler(Looper.getMainLooper())
+
+        fun setMethodChannel(channel: MethodChannel?) {
+            methodChannel = channel
+        }
+
+        fun sendPositionToFlutter(position: Position) {
+            methodChannel?.let { channel ->
+                mainHandler.post {
+                    try {
+                        channel.invokeMethod("onPositionUpdate", position.toMap())
+                    } catch (e: Exception) {
+                        timber.log.Timber.tag(TAG).e(e, "Failed to send position to Flutter")
+                    }
+                }
+            }
+        }
+
+        fun sendStatusToFlutter(status: String) {
+            methodChannel?.let { channel ->
+                mainHandler.post {
+                    try {
+                        channel.invokeMethod("onStatusUpdate", status)
+                    } catch (e: Exception) {
+                        timber.log.Timber.tag(TAG).e(e, "Failed to send status to Flutter")
+                    }
+                }
+            }
+        }
+
     }
 
-    private lateinit var activity: Activity
+    private lateinit var applicationContext: Context
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var alarmManager: AlarmManager
     private lateinit var alarmIntent: PendingIntent
     private var requestingPermissions: Boolean = false
 
     fun setup(activity: Activity) {
-        this.activity = activity
+        // Store application context instead of activity to avoid memory leak
+        this.applicationContext = activity.applicationContext
 
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity)
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         sharedPreferences.registerOnSharedPreferenceChangeListener(this::onSharedPreferenceChanged)
-        initPreferences(activity)
+        initPreferences(applicationContext)
 
         System.setProperty("http.keepAliveDuration", (30 * 60 * 1000).toString())
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            registerChannel(activity)
+            registerChannel(applicationContext)
         } else {
-            Log.i(TAG, "There is no need to create Notification Channel")
+            Timber.tag(TAG).i("There is no need to create Notification Channel")
         }
 
-        alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val originalIntent = Intent(activity, AutostartReceiver::class.java)
+        alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val originalIntent = Intent(applicationContext, AutostartReceiver::class.java)
         originalIntent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
 
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -101,7 +137,7 @@ class TraccarController {
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-        alarmIntent = PendingIntent.getBroadcast(activity, 0, originalIntent, flags)
+        alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, originalIntent, flags)
 
 //        if (sharedPreferences.getBoolean(KEY_STATUS, false)) {
 //            startTrackingService(
@@ -131,7 +167,7 @@ class TraccarController {
         }
     }
 
-    fun onStart() {
+    fun onStart(activity: Activity) {
         if (requestingPermissions) {
             requestingPermissions = BatteryOptimizationHelper().requestException(activity)
         }
@@ -164,17 +200,13 @@ class TraccarController {
         sharedPreferences: SharedPreferences?,
         key: String?,
     ) {
+        // Note: This method is kept for SharedPreferences listener but cannot start service
+        // without activity reference. The service should be started via the plugin's
+        // startService method call which provides the activity reference.
         if (key == KEY_STATUS) {
-            if (sharedPreferences?.getBoolean(KEY_STATUS, false) == true) {
-                startTrackingService(
-                    checkLocationPermission = true,
-                    checkNotificationPermission = true,
-                    initialPermission = false,
-                )
-            } else {
+            if (sharedPreferences?.getBoolean(KEY_STATUS, false) == false) {
                 stopTrackingService()
             }
-
         }
     }
 
@@ -218,12 +250,13 @@ class TraccarController {
 //    }
 
     fun startTrackingService(
+        activity: Activity? = null,
         checkLocationPermission: Boolean,
         checkNotificationPermission: Boolean,
         initialPermission: Boolean,
     ) {
         var permission = initialPermission
-        if (checkLocationPermission) {
+        if (checkLocationPermission && activity != null) {
             val requiredPermissions: MutableSet<String> = HashSet()
             if (ContextCompat.checkSelfPermission(
                     activity,
@@ -244,7 +277,7 @@ class TraccarController {
             }
         }
 
-        if (checkNotificationPermission) {
+        if (checkNotificationPermission && activity != null) {
             val requiredPermissions: MutableSet<String> = HashSet()
             if (ContextCompat.checkSelfPermission(
                     activity,
@@ -269,8 +302,8 @@ class TraccarController {
 
         if (permission) {
             ContextCompat.startForegroundService(
-                activity,
-                Intent(activity, TrackingService::class.java)
+                applicationContext,
+                Intent(applicationContext, TrackingService::class.java)
             )
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 alarmManager.setInexactRepeating(
@@ -279,7 +312,7 @@ class TraccarController {
                 )
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+            if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                 && ContextCompat.checkSelfPermission(
                     activity,
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION
@@ -292,7 +325,7 @@ class TraccarController {
                         PERMISSIONS_REQUEST_BACKGROUND_LOCATION
                     )
                 }
-            } else {
+            } else if (activity != null) {
             requestingPermissions =
                     BatteryOptimizationHelper().requestException(activity)
             }
@@ -308,10 +341,32 @@ class TraccarController {
             } catch (_: Exception) {
             }
         }
-        activity.stopService(Intent(activity, TrackingService::class.java))
+        applicationContext.stopService(Intent(applicationContext, TrackingService::class.java))
+    }
+
+    fun getServiceStatus(): String {
+        // Check if service is configured to run
+        val isConfigured = sharedPreferences.getBoolean(KEY_STATUS, false)
+
+        if (!isConfigured) {
+            return "stopped"
+        }
+
+        // Check if service is actually running
+        val manager = applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        @Suppress("DEPRECATION")
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (TrackingService::class.java.name == service.service.className) {
+                return "running"
+            }
+        }
+
+        // Service is configured but not running (error state)
+        return "error"
     }
 
     fun onRequestPermissionsResult(
+        activity: Activity,
         requestCode: Int,
         permissions: Array<String>,
         grantResults: IntArray
@@ -325,6 +380,7 @@ class TraccarController {
                 }
             }
             startTrackingService(
+                activity,
                 checkLocationPermission = false,
                 checkNotificationPermission = true,
                 initialPermission = granted
@@ -332,6 +388,7 @@ class TraccarController {
             return true
         } else if (requestCode == PERMISSIONS_REQUEST_NOTIFICATION) {
             startTrackingService(
+                activity,
                 checkLocationPermission = true,
                 checkNotificationPermission = false,
                 initialPermission = true

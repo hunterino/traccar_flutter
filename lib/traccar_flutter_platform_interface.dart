@@ -43,4 +43,13 @@ abstract class TraccarFlutterPlatform extends PlatformInterface {
   Future<String?> showStatusLogs() {
     throw UnimplementedError('showStatusLogs() has not been implemented.');
   }
+
+  Future<String?> getServiceStatus() {
+    throw UnimplementedError('getServiceStatus() has not been implemented.');
+  }
+
+  /// Sets a handler for method calls from native platforms
+  void setMethodCallHandler(Future<void> Function(String method, dynamic arguments)? handler) {
+    throw UnimplementedError('setMethodCallHandler() has not been implemented.');
+  }
 }

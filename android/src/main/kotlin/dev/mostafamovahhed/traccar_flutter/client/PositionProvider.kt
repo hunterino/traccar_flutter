@@ -22,7 +22,7 @@ import android.content.SharedPreferences
 import android.location.Location
 import android.os.BatteryManager
 import androidx.preference.PreferenceManager
-import android.util.Log
+import timber.log.Timber
 import kotlin.math.abs
 
 abstract class PositionProvider(
@@ -53,11 +53,11 @@ abstract class PositionProvider(
                     && location.distanceTo(lastLocation) >= distance || angle > 0
                     && abs(location.bearing - lastLocation.bearing) >= angle)
         ) {
-            Log.i(TAG, "new location: $location")
+            Timber.tag(TAG).i("new location: $location")
             this.lastLocation = location
             listener.onPositionUpdate(Position(deviceId, location, getBatteryStatus(context)))
         } else {
-            Log.i(TAG, if (location != null) "location ignored" else "location nil")
+            Timber.tag(TAG).i(if (location != null) "location ignored" else "location nil")
         }
     }
 

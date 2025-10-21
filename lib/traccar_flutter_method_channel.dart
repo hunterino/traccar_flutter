@@ -10,6 +10,19 @@ class MethodChannelTraccarFlutter extends TraccarFlutterPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('traccar_flutter');
 
+  Future<void> Function(String method, dynamic arguments)? _methodCallHandler;
+
+  MethodChannelTraccarFlutter() {
+    methodChannel.setMethodCallHandler(_handleMethodCall);
+  }
+
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    if (_methodCallHandler != null) {
+      await _methodCallHandler!(call.method, call.arguments);
+    }
+    return null;
+  }
+
   @override
   Future<String?> initTraccar() {
     return methodChannel.invokeMethod<String>('init');
@@ -33,5 +46,15 @@ class MethodChannelTraccarFlutter extends TraccarFlutterPlatform {
   @override
   Future<String?> showStatusLogs() {
     return methodChannel.invokeMethod<String>('statusActivity');
+  }
+
+  @override
+  Future<String?> getServiceStatus() {
+    return methodChannel.invokeMethod<String>('getServiceStatus');
+  }
+
+  @override
+  void setMethodCallHandler(Future<void> Function(String method, dynamic arguments)? handler) {
+    _methodCallHandler = handler;
   }
 }

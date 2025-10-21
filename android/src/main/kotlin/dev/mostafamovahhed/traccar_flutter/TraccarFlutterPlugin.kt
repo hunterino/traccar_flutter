@@ -14,6 +14,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import timber.log.Timber
 
 /** TraccarFlutterPlugin */
 class TraccarFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
@@ -23,11 +24,23 @@ class TraccarFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
    private lateinit var activity: Activity
    private lateinit var traccarController: TraccarController
    private lateinit var binding: ActivityPluginBinding
+   private var timberInitialized = false
 
    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
        context = flutterPluginBinding.applicationContext
        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "traccar_flutter")
        channel.setMethodCallHandler(this)
+
+       // Initialize Timber for structured logging
+       if (!timberInitialized) {
+           // Check if app is debuggable (works in library modules unlike BuildConfig.DEBUG)
+           val isDebuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+           if (isDebuggable) {
+               Timber.plant(Timber.DebugTree())
+           }
+           timberInitialized = true
+           Timber.tag("TraccarPlugin").i("Traccar Flutter plugin attached to engine")
+       }
    }
 
    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -54,6 +67,7 @@ class TraccarFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
            "startService" -> {
                traccarController.startTrackingService(
+                   activity,
                    checkLocationPermission = true,
                    checkNotificationPermission = true,
                    initialPermission = false
@@ -69,6 +83,11 @@ class TraccarFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
            "statusActivity" -> {
                activity.startActivity(Intent(activity, StatusActivity::class.java))
                result.success("launch status activity")
+           }
+
+           "getServiceStatus" -> {
+               val status = traccarController.getServiceStatus()
+               result.success(status)
            }
 
            else -> {
@@ -100,9 +119,13 @@ class TraccarFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
        this.binding = binding
        this.traccarController = TraccarController.getInstance()
 
+       // Set the method channel for position streaming
+       TraccarController.setMethodChannel(channel)
+
        // Register the permission result listener
        binding.addRequestPermissionsResultListener { requestCode, permissions, grantResults ->
            this.traccarController.onRequestPermissionsResult(
+               this.activity,
                requestCode,
                permissions,
                grantResults
@@ -115,7 +138,7 @@ class TraccarFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
            override fun onActivityStarted(activity: Activity) {
                if (activity == this@TraccarFlutterPlugin.activity) {
-                   this@TraccarFlutterPlugin.traccarController.onStart()
+                   this@TraccarFlutterPlugin.traccarController.onStart(activity)
                }
            }
 

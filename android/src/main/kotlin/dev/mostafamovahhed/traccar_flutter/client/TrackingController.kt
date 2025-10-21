@@ -19,10 +19,15 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.preference.PreferenceManager
-import android.util.Log
+import timber.log.Timber
 import dev.mostafamovahhed.traccar_flutter.R
 import dev.mostafamovahhed.traccar_flutter.client.ProtocolFormatter.formatRequest
 import dev.mostafamovahhed.traccar_flutter.client.RequestManager.sendRequestAsync
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class TrackingController(private val context: Context) : PositionProvider.PositionListener,
     NetworkManager.NetworkHandler {
@@ -32,12 +37,14 @@ class TrackingController(private val context: Context) : PositionProvider.Positi
     private val positionProvider = PositionProviderFactory.create(context, this)
     private val databaseHelper = DatabaseHelper(context)
     private val networkManager = NetworkManager(context, this)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val url: String = preferences.getString(TraccarController.KEY_URL, context.getString(R.string.settings_url_default_value))!!
     private val buffer: Boolean = preferences.getBoolean(TraccarController.KEY_BUFFER, true)
 
     private var isOnline = networkManager.isOnline
     private var isWaiting = false
+    private var lastCleanupTime: Long = 0
 
     fun start() {
         if (isOnline) {
@@ -46,7 +53,7 @@ class TrackingController(private val context: Context) : PositionProvider.Positi
         try {
             positionProvider.startUpdates()
         } catch (e: SecurityException) {
-            Log.w(TAG, e)
+            Timber.tag(TAG).w(e)
         }
         networkManager.start()
     }
@@ -56,13 +63,18 @@ class TrackingController(private val context: Context) : PositionProvider.Positi
         try {
             positionProvider.stopUpdates()
         } catch (e: SecurityException) {
-            Log.w(TAG, e)
+            Timber.tag(TAG).w(e)
         }
         handler.removeCallbacksAndMessages(null)
+        coroutineScope.cancel()
     }
 
     override fun onPositionUpdate(position: Position) {
         TraccarController.addStatusLog(context.getString(R.string.status_location_update))
+
+        // Send position to Flutter
+        TraccarController.sendPositionToFlutter(position)
+
         if (buffer) {
             write(position)
         } else {
@@ -97,77 +109,92 @@ class TrackingController(private val context: Context) : PositionProvider.Positi
                     " lat:" + position.latitude +
                     " lon:" + position.longitude + ")"
         }
-        Log.d(TAG, formattedAction)
+        Timber.tag(TAG).d(formattedAction)
     }
 
     private fun write(position: Position) {
         log("write", position)
-        databaseHelper.insertPositionAsync(position, object :
-            DatabaseHelper.DatabaseHandler<Unit?> {
-            override fun onComplete(success: Boolean, result: Unit?) {
-                if (success) {
-                    if (isOnline && isWaiting) {
-                        read()
-                        isWaiting = false
+        coroutineScope.launch {
+            databaseHelper.insertPositionAsync(position).onSuccess {
+                if (isOnline && isWaiting) {
+                    read()
+                    isWaiting = false
+                }
+
+                // Periodic cleanup: run every 24 hours
+                performCleanupIfNeeded()
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to insert position")
+            }
+        }
+    }
+
+    private fun performCleanupIfNeeded() {
+        val now = System.currentTimeMillis()
+        if (now - lastCleanupTime > CLEANUP_INTERVAL_MS) {
+            lastCleanupTime = now
+            coroutineScope.launch {
+                databaseHelper.performCleanup().onSuccess { stats ->
+                    if (stats.totalDeleted > 0) {
+                        Timber.tag(TAG).i("Database cleanup: deleted ${stats.totalDeleted} positions")
+                        TraccarController.addStatusLog("Cleaned up ${stats.totalDeleted} old positions")
                     }
+                }.onFailure { error ->
+                    Timber.tag(TAG).w(error, "Database cleanup failed")
                 }
             }
-        })
+        }
     }
 
     private fun read() {
         log("read", null)
-        databaseHelper.selectPositionAsync(object : DatabaseHelper.DatabaseHandler<Position?> {
-            override fun onComplete(success: Boolean, result: Position?) {
-                if (success) {
-                    if (result != null) {
-                        if (result.deviceId == preferences.getString(TraccarController.KEY_DEVICE, null)) {
-                            send(result)
-                        } else {
-                            delete(result)
-                        }
+        coroutineScope.launch {
+            databaseHelper.selectPositionAsync().onSuccess { position ->
+                if (position != null) {
+                    if (position.deviceId == preferences.getString(TraccarController.KEY_DEVICE, null)) {
+                        send(position)
                     } else {
-                        isWaiting = true
+                        delete(position)
                     }
                 } else {
-                    retry()
+                    isWaiting = true
                 }
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to select position")
+                retry()
             }
-        })
+        }
     }
 
     private fun delete(position: Position) {
         log("delete", position)
-        databaseHelper.deletePositionAsync(position.id, object :
-            DatabaseHelper.DatabaseHandler<Unit?> {
-            override fun onComplete(success: Boolean, result: Unit?) {
-                if (success) {
-                    read()
-                } else {
-                    retry()
-                }
+        coroutineScope.launch {
+            databaseHelper.deletePositionAsync(position.id).onSuccess {
+                read()
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to delete position")
+                retry()
             }
-        })
+        }
     }
 
     private fun send(position: Position) {
         log("send", position)
         val request = formatRequest(url, position)
-        sendRequestAsync(request, object : RequestManager.RequestHandler {
-            override fun onComplete(success: Boolean) {
-                if (success) {
-                    TraccarController.addStatusLog(context.getString(R.string.status_send_success))
-                    if (buffer) {
-                        delete(position)
-                    }
-                } else {
-                    TraccarController.addStatusLog(context.getString(R.string.status_send_fail))
-                    if (buffer) {
-                        retry()
-                    }
+        coroutineScope.launch {
+            sendRequestAsync(request).onSuccess {
+                TraccarController.addStatusLog(context.getString(R.string.status_send_success))
+                if (buffer) {
+                    delete(position)
+                }
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Failed to send request")
+                TraccarController.addStatusLog(context.getString(R.string.status_send_fail))
+                if (buffer) {
+                    retry()
                 }
             }
-        })
+        }
     }
 
     private fun retry() {
@@ -182,6 +209,7 @@ class TrackingController(private val context: Context) : PositionProvider.Positi
     companion object {
         private val TAG = TrackingController::class.java.simpleName
         private const val RETRY_DELAY = 30 * 1000
+        private const val CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24 hours
     }
 
 }

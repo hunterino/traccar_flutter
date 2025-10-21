@@ -28,7 +28,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
-import android.util.Log
+import timber.log.Timber
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -46,9 +46,10 @@ class TrackingService : Service() {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         try {
             startForeground(NOTIFICATION_ID, createNotification(this))
-            Log.i(TAG, "service create")
+            Timber.tag(TAG).i("service create")
             sendBroadcast(Intent(ACTION_STARTED).setPackage(packageName))
             TraccarController.addStatusLog(getString(R.string.status_service_create))
+            TraccarController.sendStatusToFlutter("running")
 
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -65,7 +66,7 @@ class TrackingService : Service() {
                 trackingController?.start()
             }
         } catch (e: RuntimeException) {
-            Log.w(TAG, e)
+            Timber.tag(TAG).w(e)
             sharedPreferences.edit().putBoolean(TraccarController.KEY_STATUS, false).apply()
             stopSelf()
         }
@@ -82,9 +83,10 @@ class TrackingService : Service() {
 
     override fun onDestroy() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        Log.i(TAG, "service destroy")
+        Timber.tag(TAG).i("service destroy")
         sendBroadcast(Intent(ACTION_STOPPED).setPackage(packageName))
         TraccarController.addStatusLog(getString(R.string.status_service_destroy))
+        TraccarController.sendStatusToFlutter("stopped")
         if (wakeLock?.isHeld == true) {
             wakeLock?.release()
         }

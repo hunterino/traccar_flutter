@@ -21,7 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
-import android.util.Log
+import timber.log.Timber
 
 class NetworkManager(private val context: Context, private val handler: NetworkHandler?) : BroadcastReceiver() {
 
@@ -50,7 +50,7 @@ class NetworkManager(private val context: Context, private val handler: NetworkH
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ConnectivityManager.CONNECTIVITY_ACTION && handler != null) {
             val isOnline = isOnline
-            Log.i(TAG, "network " + if (isOnline) "on" else "off")
+            Timber.tag(TAG).i("network " + if (isOnline) "on" else "off")
             handler.onNetworkUpdate(isOnline)
         }
     }
