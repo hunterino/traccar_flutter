@@ -363,7 +363,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                     // Accuracy Level Dropdown
                     DropdownButtonFormField<AccuracyLevel>(
-                      value: _selectedAccuracy,
+                      initialValue: _selectedAccuracy,
                       decoration: const InputDecoration(
                         labelText: 'Location Accuracy',
                         prefixIcon: Icon(Icons.gps_fixed),
@@ -556,7 +556,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Divider(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
           ),
         ),
       ],

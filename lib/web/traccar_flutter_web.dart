@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
+// ignore: deprecated_member_use
 import 'dart:html' as html;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:traccar_flutter/entity/traccar_configs.dart';
 import 'package:traccar_flutter/traccar_flutter_platform_interface.dart';
@@ -27,11 +28,6 @@ class TraccarFlutterWeb extends TraccarFlutterPlatform {
   @override
   Future<String?> initTraccar() async {
     try {
-      // Check if geolocation is available
-      if (html.window.navigator.geolocation == null) {
-        return 'Geolocation is not supported by this browser';
-      }
-
       // Load saved configs from localStorage
       _loadConfigs();
 
@@ -65,7 +61,7 @@ class TraccarFlutterWeb extends TraccarFlutterPlatform {
 
       // Request permission by getting current position
       try {
-        await html.window.navigator.geolocation!.getCurrentPosition();
+        await html.window.navigator.geolocation.getCurrentPosition();
       } catch (e) {
         return 'Location permission denied. Please enable location access in your browser.';
       }
@@ -149,7 +145,7 @@ Traccar Flutter Web Status:
     };
 
     // Use watchPosition with a Stream
-    final stream = html.window.navigator.geolocation!.watchPosition(
+    final stream = html.window.navigator.geolocation.watchPosition(
       enableHighAccuracy: options['enableHighAccuracy'] as bool,
       timeout: Duration(milliseconds: options['timeout'] as int),
       maximumAge: Duration(milliseconds: options['maximumAge'] as int),
@@ -160,7 +156,7 @@ Traccar Flutter Web Status:
         _handleNewPosition(position);
       },
       onError: (error) {
-        print('Location error: $error');
+        debugPrint('Location error: $error');
       },
     );
   }
@@ -249,7 +245,7 @@ Traccar Flutter Web Status:
         }
       }
     } catch (e) {
-      print('Failed to send position: $e');
+      debugPrint('Failed to send position: $e');
 
       // Buffer for offline sending if enabled
       if (_configs!.offlineBuffering == true) {
@@ -281,13 +277,13 @@ Traccar Flutter Web Status:
         throw Exception('Server returned ${response.status}: ${response.statusText}');
       }
 
-      print('Position sent successfully to server');
+      debugPrint('Position sent successfully to server');
     } catch (e) {
       // CORS error is common when running web apps from localhost
       // This is expected browser security behavior
-      print('Failed to send position to $url');
-      print('Note: If you see a CORS error, the Traccar server needs to enable CORS headers.');
-      print('For production, deploy your web app to the same domain as your Traccar server.');
+      debugPrint('Failed to send position to $url');
+      debugPrint('Note: If you see a CORS error, the Traccar server needs to enable CORS headers.');
+      debugPrint('For production, deploy your web app to the same domain as your Traccar server.');
       rethrow;
     }
   }

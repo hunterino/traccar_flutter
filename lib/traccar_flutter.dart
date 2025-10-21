@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'entity/traccar_configs.dart';
 import 'entity/position.dart';
 import 'entity/service_status.dart';
@@ -56,7 +58,7 @@ class TraccarFlutter {
         _statusController.add(status);
         break;
       default:
-        print('Unknown method call from native: $method');
+        debugPrint('Unknown method call from native: $method');
     }
   }
 
