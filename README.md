@@ -1,6 +1,6 @@
 # Traccar Flutter
 
-A Flutter library to integrate with the [Traccar](https://www.traccar.org/) tracking platform. This package acts as a bridge to the native Android and iOS implementations of the Traccar SDK, enabling seamless location tracking and configuration.
+A Flutter library to integrate with the [Traccar](https://www.traccar.org/) tracking platform. This package provides location tracking across Android, iOS, and Web platforms, using native SDKs for mobile and browser Geolocation API for web.
 
 ---
 
@@ -15,19 +15,21 @@ If you have any questions, suggestions, or need support, feel free to reach out:
 ---
 
 ## Features
-- Cross-platform support for **Android** and **iOS**.
+- Cross-platform support for **Android**, **iOS**, and **Web**.
 - Provides methods to:
   - Initialize the Traccar service.
   - Configure tracking settings.
   - Start and stop the tracking service.
   - View service status logs.
 - Uses the official Traccar native SDKs for Android and iOS for reliable and efficient tracking.
+- Uses browser Geolocation API for web platform support.
 
 
-## Native Traccar SDKs
-This library leverages the following native SDKs:
-- [Traccar Android SDK](https://github.com/traccar/traccar-client-android)
-- [Traccar iOS SDK](https://github.com/traccar/traccar-client-ios)
+## Platform Implementations
+This library leverages the following implementations:
+- **Android**: [Traccar Android SDK](https://github.com/traccar/traccar-client-android)
+- **iOS**: [Traccar iOS SDK](https://github.com/traccar/traccar-client-ios)
+- **Web**: Browser Geolocation API (see [Web Implementation Guide](docs/web-implementation.md))
 
 ---
 
@@ -80,11 +82,21 @@ In your `Info.plist` file, add the following keys to define the permissions requ
 
 These permissions are required for the app to access location services in both foreground and background modes.
 
+#### **Web**
+No special configuration needed! The browser will automatically prompt the user for location permission when `startService()` is called.
+
+**Requirements:**
+- HTTPS required (except localhost during development)
+- Modern browser with Geolocation API support
+
+**Note:** Web platform cannot track location in background (when browser tab is closed). For 24/7 tracking, use native Android/iOS apps. See the [Web Implementation Guide](docs/web-implementation.md) for details.
+
 ---
 
 ### Additional Notes:
 - **Android**: Ensure you dynamically request location permissions at runtime for Android API level 23 or higher.
 - **iOS**: Location permissions must be granted by the user. When using background location updates, ensure compliance with Apple's App Store guidelines.
+- **Web**: Browser prompts automatically for location permission. HTTPS required for production. See [Web Implementation Guide](docs/web-implementation.md) for CORS configuration.
 
 ---
 
@@ -141,17 +153,17 @@ void main() async {
 
 ### Configuration Parameters
 
-| **Parameter**        | **Type**           | **Required** | **Default Value** | **Description**                                                                                  |
-|-----------------------|--------------------|--------------|-------------------|--------------------------------------------------------------------------------------------------|
-| `deviceId`           | `String`          | ✅           | -                 | Unique identifier for the device.                                                              |
-| `serverUrl`          | `String`          | ✅           | -                 | URL of the Traccar server where location data will be sent.                                     |
-| `accuracy`           | `AccuracyLevel`   | ❌           | `AccuracyLevel.high` | Defines the desired location accuracy (Low, Medium, High).                                      |
-| `interval`           | `int` (milliseconds) | ❌           | `10000` (10 seconds) | Time interval between location updates.                                                        |
-| `distance`           | `int` (meters)    | ❌           | `0`               | Minimum distance (in meters) required to trigger a location update.                            |
-| `angle`              | `int` (degrees)   | ❌           | `0`               | Angle threshold to trigger a location update based on direction changes.                       |
-| `offlineBuffering`   | `bool`            | ❌           | `true`            | Enables offline buffering of location updates when the device is offline.                      |
-| `wakelock`           | `bool`            | ❌           | `true`            | Keeps the device awake while the tracking service is running.                                   |
-| `notificationIcon`   | `String`          | ❌           | `null`            | Name of the custom notification icon for the tracking service. Must be present in app assets.   |
+| **Parameter**        | **Type**           | **Required** | **Default Value** | **Description**                                                                                  | **Platforms** |
+|-----------------------|--------------------|--------------|-------------------|--------------------------------------------------------------------------------------------------|---------------|
+| `deviceId`           | `String`          | ✅           | -                 | Unique identifier for the device.                                                              | All |
+| `serverUrl`          | `String`          | ✅           | -                 | URL of the Traccar server where location data will be sent.                                     | All |
+| `accuracy`           | `AccuracyLevel`   | ❌           | `AccuracyLevel.high` | Defines the desired location accuracy (Low, Medium, High).                                      | All |
+| `interval`           | `int` (milliseconds) | ❌           | `10000` (10 seconds) | Time interval between location updates.                                                        | All |
+| `distance`           | `int` (meters)    | ❌           | `0`               | Minimum distance (in meters) required to trigger a location update.                            | All |
+| `angle`              | `int` (degrees)   | ❌           | `0`               | Angle threshold to trigger a location update based on direction changes.                       | All |
+| `offlineBuffering`   | `bool`            | ❌           | `true`            | Enables offline buffering of location updates when the device is offline.                      | All |
+| `wakelock`           | `bool`            | ❌           | `true`            | Keeps the device awake while the tracking service is running.                                   | Android only |
+| `notificationIcon`   | `String`          | ❌           | `null`            | Name of the custom notification icon for the tracking service. Must be present in app assets.   | Android only |
 
 ---
 

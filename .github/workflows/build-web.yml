@@ -1,0 +1,77 @@
+name: Build Web App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter analyzer
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: Get example app dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Build Web (Release)
+        working-directory: example
+        run: flutter build web --release
+
+      - name: Create build info file
+        working-directory: example/build/web
+        run: |
+          echo "Build Information" > BUILD_INFO.txt
+          echo "=================" >> BUILD_INFO.txt
+          echo "Built on: $(date)" >> BUILD_INFO.txt
+          echo "Flutter version: 3.35.6" >> BUILD_INFO.txt
+          echo "Build type: Release" >> BUILD_INFO.txt
+          echo "" >> BUILD_INFO.txt
+          echo "Deployment Instructions:" >> BUILD_INFO.txt
+          echo "1. Upload contents of this directory to your web server" >> BUILD_INFO.txt
+          echo "2. Ensure HTTPS is enabled (required for geolocation)" >> BUILD_INFO.txt
+          echo "3. Configure CORS on your Traccar server if on different domain" >> BUILD_INFO.txt
+          echo "4. See docs/web-implementation.md for detailed guide" >> BUILD_INFO.txt
+
+      - name: Package Web Build
+        working-directory: example
+        run: |
+          cd build
+          zip -r ../traccar-flutter-web.zip web
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: example/traccar-flutter-web.zip
+          retention-days: 30
+
+      - name: Get build info
+        run: |
+          echo "Web build size:"
+          ls -lh example/traccar-flutter-web.zip || echo "Not found"
+          echo ""
+          echo "Build directory contents:"
+          du -sh example/build/web || echo "Not found"

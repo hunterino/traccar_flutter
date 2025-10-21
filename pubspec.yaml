@@ -1,17 +1,19 @@
 name: traccar_flutter
-description: "A Flutter plugin for integrating with the Traccar location tracking platform, providing seamless tracking capabilities for Android and iOS."
-version: 1.0.2+4
+description: "A Flutter plugin for integrating with the Traccar location tracking platform, providing seamless tracking capabilities for Android, iOS, and Web."
+version: 1.0.4
 homepage: "https://github.com/mostafamvh/traccar_flutter"
 
 maintainers:
   - "Mostafa Movahhed <Thisismovahhed@gmail.com>"
-  
+
 environment:
   sdk: ^3.5.3
   flutter: '>=3.3.0'
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_web_plugins:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
 
@@ -29,3 +31,6 @@ flutter:
         pluginClass: TraccarFlutterPlugin
       ios:
         pluginClass: TraccarFlutterPlugin
+      web:
+        pluginClass: TraccarFlutterWeb
+        fileName: web/traccar_flutter_web.dart
