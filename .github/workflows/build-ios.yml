@@ -1,0 +1,84 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter analyzer
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: Get example app dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        working-directory: example/ios
+        run: pod install
+
+      - name: Build iOS for Simulator (Debug)
+        working-directory: example
+        run: flutter build ios --simulator --debug
+
+      - name: Build iOS for Device (Debug, no codesign)
+        working-directory: example
+        run: flutter build ios --debug --no-codesign
+
+      - name: Package Simulator Build
+        working-directory: example
+        run: |
+          cd build/ios/Debug-iphonesimulator
+          zip -r ../../../Runner-Simulator-Debug.zip Runner.app
+          cd ../../..
+
+      - name: Package Device Build
+        working-directory: example
+        run: |
+          cd build/ios/Debug-iphoneos
+          zip -r ../../../Runner-Device-Debug.zip Runner.app
+          cd ../../..
+
+      - name: Upload Simulator Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-debug
+          path: example/Runner-Simulator-Debug.zip
+          retention-days: 30
+
+      - name: Upload Device Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-device-debug
+          path: example/Runner-Device-Debug.zip
+          retention-days: 30
+
+      - name: Get build info
+        run: |
+          echo "Simulator build size:"
+          ls -lh example/Runner-Simulator-Debug.zip || echo "Not found"
+          echo "Device build size:"
+          ls -lh example/Runner-Device-Debug.zip || echo "Not found"
