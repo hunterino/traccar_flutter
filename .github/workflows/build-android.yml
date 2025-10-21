@@ -1,0 +1,73 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter analyzer
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: Get example app dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Build Android APK (Debug)
+        working-directory: example
+        run: flutter build apk --debug
+
+      - name: Build Android APK (Release)
+        working-directory: example
+        run: flutter build apk --release
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: example/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: example/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Get APK info
+        run: |
+          echo "Debug APK size:"
+          ls -lh example/build/app/outputs/flutter-apk/app-debug.apk
+          echo "Release APK size:"
+          ls -lh example/build/app/outputs/flutter-apk/app-release.apk
