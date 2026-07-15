@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(flutter test:*)",
+      "Bash(pod install)",
+      "Bash(pod install:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter emulators:*)",
+      "Bash(flutter run:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew :traccar_flutter:test:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter build:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(./gradlew :traccar_flutter:compileDebugKotlin:*)",
+      "Bash(while read file)",
+      "Bash(do /tmp/migrate_to_timber.sh \"$file\" done)",
+      "Bash(/tmp/migrate_to_timber.sh /Users/michael/code/sand/traccar_flutter/android/src/main/kotlin/dev/mostafamovahhed/traccar_flutter/client/DatabaseHelper.kt)",
+      "Bash(/tmp/migrate_to_timber.sh /Users/michael/code/sand/traccar_flutter/android/src/main/kotlin/dev/mostafamovahhed/traccar_flutter/client/RequestManager.kt)",
+      "Bash(/tmp/migrate_to_timber.sh /Users/michael/code/sand/traccar_flutter/android/src/main/kotlin/dev/mostafamovahhed/traccar_flutter/client/TraccarController.kt)",
+      "Bash(/tmp/migrate_to_timber.sh /Users/michael/code/sand/traccar_flutter/android/src/main/kotlin/dev/mostafamovahhed/traccar_flutter/client/FusedPositionProvider.kt)",
+      "Bash(/tmp/migrate_to_timber.sh:*)",
+      "Bash(/Users/michael/code/sand/traccar_flutter/android/src/test/kotlin/dev/mostafamovahhed/traccar_flutter/client/PositionProviderFactoryTest.kt )",
+      "Bash(/Users/michael/code/sand/traccar_flutter/android/src/test/kotlin/dev/mostafamovahhed/traccar_flutter/client/TrackingControllerTest.kt)",
+      "Bash(r)",
+      "Bash(cat:*)",
+      "Bash(tree:*)",
+      "Bash(zip:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh run:*)",
+      "Bash(flutter analyze:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

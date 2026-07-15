@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/michael/code/sand/traccar_flutter/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
