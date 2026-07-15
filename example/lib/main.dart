@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:traccar_flutter/entity/position.dart';
 import 'package:traccar_flutter/entity/traccar_configs.dart';
 import 'package:traccar_flutter/traccar_flutter.dart';
 
@@ -41,16 +44,42 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _traccarFlutterPlugin = TraccarFlutter();
+  final MapController _mapController = MapController();
   bool isServiceStarted = false;
   String? traccingMessage;
   String? currentDeviceId;
   String? currentServerUrl;
   int? currentInterval;
+  Position? _currentPosition;
+  StreamSubscription<Position>? _positionSubscription;
 
   @override
   void initState() {
     super.initState();
     initPlatformState();
+    _startListeningToPosition();
+  }
+
+  void _startListeningToPosition() {
+    _positionSubscription = _traccarFlutterPlugin.positionStream.listen(
+      (position) {
+        setState(() {
+          _currentPosition = position;
+        });
+
+        // Auto-center map on new position
+        _mapController.move(
+          LatLng(position.latitude, position.longitude),
+          15.0,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -208,6 +237,16 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Map Widget
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: SizedBox(
+                  height: 300,
+                  child: _buildMapWidget(),
+                ),
+              ),
               const Spacer(),
 
               // Action Buttons
@@ -242,6 +281,70 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+    );
+  }
+
+  Widget _buildMapWidget() {
+    // Default center (San Francisco) if no position yet
+    final center = _currentPosition != null
+        ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+        : LatLng(37.7749, -122.4194);
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: 15.0,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'dev.mostafamovahhed.traccar_flutter.example',
+          maxZoom: 19,
+        ),
+        if (_currentPosition != null)
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                width: 60,
+                height: 60,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.navigation,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        if (_currentPosition != null && _currentPosition!.accuracy > 0)
+          CircleLayer(
+            circles: [
+              CircleMarker(
+                point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                radius: _currentPosition!.accuracy,
+                useRadiusInMeter: true,
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderColor: Colors.blue.withValues(alpha: 0.3),
+                borderStrokeWidth: 2,
+              ),
+            ],
+          ),
+      ],
     );
   }
 

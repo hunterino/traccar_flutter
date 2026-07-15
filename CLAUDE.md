@@ -50,10 +50,11 @@ cd example && flutter build ios
 ## Code Architecture
 
 ### Flutter Layer (Dart)
-- **`lib/traccar_flutter.dart`**: Main public API that Flutter apps interact with
+- **`lib/traccar_flutter.dart`**: Main public API (singleton with position/status streams)
 - **`lib/traccar_flutter_platform_interface.dart`**: Abstract interface defining platform contracts
 - **`lib/traccar_flutter_method_channel.dart`**: MethodChannel implementation for platform communication
-- **`lib/entity/`**: Data models (`TraccarConfigs`, `AccuracyLevel`)
+- **`lib/web/traccar_flutter_web.dart`**: Web platform implementation (`TraccarFlutterWeb`)
+- **`lib/entity/`**: Data models (`TraccarConfigs`, `AccuracyLevel`, `Position`, `ServiceStatus`)
 
 ### Android Layer (Kotlin)
 Located in `android/src/main/kotlin/dev/mostafamovahhed/traccar_flutter/`:
@@ -62,14 +63,20 @@ Located in `android/src/main/kotlin/dev/mostafamovahhed/traccar_flutter/`:
 - **`client/TraccarController.kt`**: Singleton controller managing service lifecycle, permissions, and SharedPreferences
 - **`client/TrackingService.kt`**: Foreground service for continuous location tracking
 - **`client/TrackingController.kt`**: Coordinates position updates and network requests
-- **`client/PositionProvider.kt`** & **`AndroidPositionProvider.kt`**: Location acquisition using Android Location APIs
-- **`client/DatabaseHelper.kt`**: SQLite database for offline buffering of positions
+- **`client/PositionProvider.kt`**, **`AndroidPositionProvider.kt`**, **`FusedPositionProvider.kt`**, **`PositionProviderFactory.kt`**: Location acquisition with both legacy and modern (FusedLocationProvider) APIs
+- **`client/database/`**: Room database for offline buffering (`TraccarDatabase.kt`, `PositionDao.kt`, `PositionEntity.kt`, `TypeConverters.kt`)
+- **`client/DatabaseHelper.kt`**: Database lifecycle management with automatic cleanup
 - **`client/NetworkManager.kt`** & **`client/RequestManager.kt`**: HTTP communication with Traccar server
+- **`client/TraccarApi.kt`**: API client
 - **`client/ProtocolFormatter.kt`**: Formats location data into Traccar protocol URL format
 - **`client/StatusActivity.kt`**: Native UI for viewing service logs
+- **`client/BatteryStatus.kt`**, **`BatteryOptimizationHelper.kt`**: Battery monitoring and optimization
+- **`client/TraccarError.kt`**: Structured error types
+- **`client/AutostartReceiver.kt`**, **`NotificationReceiver.kt`**, **`WakefulBroadcastReceiver.kt`**, **`ShortcutActivity.kt`**: System event handling
 
 **Android Key Patterns:**
 - Uses SharedPreferences for configuration persistence
+- Room database for position persistence (replaces raw SQLite)
 - Implements foreground service with notification for background tracking
 - Permission handling includes location (fine, coarse, background) and notification permissions
 - AlarmManager ensures service restarts after reboot via `AutostartReceiver`
@@ -81,11 +88,15 @@ Located in `ios/Classes/`:
 - **`TraccarController.swift`**: Singleton controller managing service lifecycle and Core Data
 - **`TrackingController.swift`**: Coordinates position updates and network requests
 - **`PositionProvider.swift`**: Location acquisition using CoreLocation
+- **`Position.swift`**, **`AccuracyLevel.swift`**: Data models
 - **`DatabaseHelper.swift`**: Core Data wrapper for offline buffering
 - **`NetworkManager.swift`** & **`RequestManager.swift`**: URLSession-based HTTP communication
 - **`ProtocolFormatter.swift`**: Formats location data into Traccar protocol URL format
+- **`DistanceCalculator.swift`**: Geographic distance calculations
+- **`BatteryStatus.swift`**: Battery monitoring
 - **`StatusViewController.swift`**: Native UI for viewing service logs
 - **`PreferenceKeys.swift`**: UserDefaults key definitions
+- **`TraccarLogger.swift`**: Logging utility
 
 **iOS Key Patterns:**
 - Uses UserDefaults for configuration persistence
@@ -123,7 +134,7 @@ Both retain original Apache 2.0 license headers. When modifying native code, mai
 
 ### Offline Buffering
 Both platforms persist location data locally when the server is unreachable:
-- **Android**: SQLite via `DatabaseHelper` (stores positions with timestamps, retries on next successful connection)
+- **Android**: Room database via `DatabaseHelper` with `PositionDao` (stores positions with timestamps, retries on next successful connection, automatic cleanup by age and count)
 - **iOS**: Core Data managed by `TraccarController` (same retry logic)
 
 ### Background Tracking Reliability
@@ -139,17 +150,15 @@ Both platforms persist location data locally when the server is unreachable:
 
 For complete details, see `docs/technical-debt-and-modernization.md`.
 
-**Critical Issues:**
-- **Android**: Uses deprecated AsyncTask (deprecated in API 30) - requires migration to Kotlin Coroutines
-- **Android**: Memory leak potential in singleton holding Activity reference
-- **Test Coverage**: < 5% across all layers - makes refactoring risky
-
 **High Priority:**
-- Android uses deprecated LocationManager instead of modern FusedLocationProviderClient
-- Android uses HttpURLConnection instead of OkHttp/Retrofit
+- **Test Coverage**: Minimal across all layers - makes refactoring risky
 - iOS has force unwraps (`!`) that could cause crashes
-- No structured error handling (methods return `String?` instead of Result types)
-- Unbounded database growth (no size limits or expiration policy)
+
+**Partially Addressed:**
+- Android now has `FusedPositionProvider` alongside legacy `AndroidPositionProvider` (via `PositionProviderFactory`)
+- Android now uses Room database with `PositionDao` cleanup strategies (retention days + max positions)
+- Android has `TraccarError` for structured error types
+- Database cleanup is implemented (see Database Size Management section below)
 
 **Impact:** The plugin is functional but requires modernization for long-term maintainability. See the modernization roadmap in `docs/` for detailed implementation guides.
 
@@ -173,7 +182,7 @@ For complete details, see `docs/technical-debt-and-modernization.md`.
 ## Testing Status
 
 **Current State:**
-- **Dart**: 1 integration test, 0 unit tests
+- **Dart**: 1 test file (`traccar_flutter_test.dart`) + entity tests (`traccar_configs_test.dart`)
 - **Android**: 0 tests (test infrastructure present in build.gradle)
 - **iOS**: 0 tests
 
@@ -212,7 +221,7 @@ Given the minimal test coverage, exercise extreme caution when refactoring:
 - Verify foreground service notification appears on Android
 
 ## Package Publishing
-- Version is managed in `pubspec.yaml` (currently 1.0.2+4)
+- Version is managed in `pubspec.yaml` (currently 1.0.4)
 - Update `CHANGELOG.md` with user-facing changes
 - Package is published to pub.dev: https://pub.dev/packages/traccar_flutter
 - Maintained by Mostafa Movahhed (not an official Traccar project)
