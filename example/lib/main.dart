@@ -164,90 +164,101 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Status Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+              // The cards and map scroll so the action buttons stay reachable
+              // on short viewports (landscape phones, split screen, foldables).
+              Expanded(
+                child: SingleChildScrollView(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            isServiceStarted ? Icons.check_circle : Icons.circle_outlined,
-                            color: isServiceStarted ? Colors.green : Colors.grey,
+                      // Status Card
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    isServiceStarted ? Icons.check_circle : Icons.circle_outlined,
+                                    color: isServiceStarted ? Colors.green : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isServiceStarted ? 'Service Running' : 'Service Stopped',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (traccingMessage != null)
+                                Text(
+                                  traccingMessage!,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            isServiceStarted ? 'Service Running' : 'Service Stopped',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      if (traccingMessage != null)
-                        Text(
-                          traccingMessage!,
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
+
+                      // Configuration Info
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Current Configuration',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Divider(),
+                              _ConfigRow(
+                                icon: Icons.smartphone,
+                                label: 'Device ID',
+                                value: currentDeviceId ?? '-',
+                              ),
+                              const SizedBox(height: 8),
+                              _ConfigRow(
+                                icon: Icons.cloud,
+                                label: 'Server',
+                                value: currentServerUrl ?? '-',
+                              ),
+                              const SizedBox(height: 8),
+                              _ConfigRow(
+                                icon: Icons.timer,
+                                label: 'Interval',
+                                value: currentInterval != null ? '${currentInterval}s' : '-',
+                              ),
+                            ],
                           ),
                         ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 16),
 
-              // Configuration Info
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Current Configuration',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      // Map Widget
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: SizedBox(
+                          height: 300,
+                          child: _buildMapWidget(),
                         ),
                       ),
-                      const Divider(),
-                      _ConfigRow(
-                        icon: Icons.smartphone,
-                        label: 'Device ID',
-                        value: currentDeviceId ?? '-',
-                      ),
-                      const SizedBox(height: 8),
-                      _ConfigRow(
-                        icon: Icons.cloud,
-                        label: 'Server',
-                        value: currentServerUrl ?? '-',
-                      ),
-                      const SizedBox(height: 8),
-                      _ConfigRow(
-                        icon: Icons.timer,
-                        label: 'Interval',
-                        value: currentInterval != null ? '${currentInterval}s' : '-',
-                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Map Widget
-              Card(
-                clipBehavior: Clip.antiAlias,
-                child: SizedBox(
-                  height: 300,
-                  child: _buildMapWidget(),
-                ),
-              ),
-              const Spacer(),
 
               // Action Buttons
               Row(
