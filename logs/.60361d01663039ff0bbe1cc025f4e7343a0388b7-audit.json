@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/michael/webdav/coyote_forge/mhunter/traccar_flutter/logs/.60361d01663039ff0bbe1cc025f4e7343a0388b7-audit.json",
+    "files": [
+        {
+            "date": 1787128942144,
+            "name": "/Users/michael/webdav/coyote_forge/mhunter/traccar_flutter/logs/mcp-puppeteer-2026-08-19.log",
+            "hash": "abf5d07a181986b0f933ff1e92c6ae2327c2f2bc720344f887ee471935e5eba4"
+        }
+    ],
+    "hashType": "sha256"
+}
