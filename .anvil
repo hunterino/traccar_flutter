@@ -21,6 +21,5 @@ version:
 environments:
   local:
     mode: native
-    config_url: "https://dev.2h2.us:8443?env=local"
     targets:
       web_wasm: flutter_run_chrome
