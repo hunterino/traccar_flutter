@@ -4,22 +4,5 @@ node:
   category: demo
   description: Flutter plugin for Traccar GPS tracking integration
 
-build:
-  platforms:
-    web_wasm:
-      builder: flutter_web
-      params:
-        wasm: true
-        no_tree_shake_icons: true
-        base_href: "/traccar-flutter/"
-      artifact: "build/web/"
-      host_path: "/traccar-flutter/"
-
-version:
-  source: git_tag
-
-environments:
-  local:
-    mode: native
-    targets:
-      web_wasm: flutter_run_chrome
+# a plugin is a library: nothing is built or served from it
+inactive: true
